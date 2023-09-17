@@ -1,3 +1,7 @@
+//#include <stdint.h>
+//#include <memory.h>
+//#include <malloc.h>
+
 #define vALLOC(T,v,s)       vec_##T##_alloc(v,s)
 #define vREALLOC(T,v,s)     vec_##T##_realloc(v,s)
 #define vDEALLOC(T,v)       vec_##T##_dealloc(v)
@@ -5,17 +9,19 @@
 #define vCOPY(T,this,other) vec_##T##_copy(this,other)
 #define vPUSH(T,v,va)       vec_##T##_push(v,va)
 
-#define VECTOR_FUNCTION_PREFIX
+//#define VECTOR_FUNCTION_PREFIX __attribute__((always_inline)) inline
 
-#define VECTOR_STRUCT_DEF(T)\
-typedef struct _vec_##T\
-{\
+//#define vec(T) vec_##T
+//#define vec_dealloc_attrib(T) __attribute__((cleanup(vec_##T##_dealloc)))
+
+
+#define VECTOR_DEFINE(T)\
+typedef struct _vec_##T{\
  T* ptr;\
  uint64_t count;\
  uint64_t capacity;\
 } vec_##T;\
-
-#define VECTOR_FUNCTION_DEF(T)\
+\
 \
 VECTOR_FUNCTION_PREFIX static T* const vec_##T##_elm(vec_##T* v,uint64_t i){\
   return &v->ptr[i];\
@@ -41,6 +47,12 @@ VECTOR_FUNCTION_PREFIX static void vec_##T##_realloc(vec_##T* v , uint64_t s){\
   if( v->ptr && v->capacity != s && v->capacity != 0) v->ptr = (T*)realloc(v->ptr,s*sizeof(T));\
   else vALLOC(T,v,s);\
   v->capacity = s;\
+}\
+\
+VECTOR_FUNCTION_PREFIX static void vec_##T##_expand(vec_##T* v , uint64_t s){\
+  if( v->ptr && v->capacity != 0 && s != 0) v->ptr = (T*)realloc(v->ptr,(s + v->capacity)*sizeof(T));\
+  else vALLOC(T,v,s + v->capacity);\
+  v->capacity += s;\
 }\
 \
 VECTOR_FUNCTION_PREFIX static void vec_##T##_copy(vec_##T* t,vec_##T* o){\
