@@ -1,3 +1,7 @@
+//#include <stdint.h>
+//#include <memory.h>
+//#include <malloc.h>
+
 #define aALLOC(T,v,s)       array_##T##_alloc(v,s)
 #define aREALLOC(T,v,s)     array_##T##_realloc(v,s)
 #define aDEALLOC(T,v)       array_##T##_dealloc(v)
@@ -5,15 +9,17 @@
 #define aMOVE(T,dst,src) array_##T##_move(dst,src)
 
 
-#define ARRAY_STRUCT_DEF(T)\
+//#define array(T) array_##T
+//#define array_dealloc_attrib(T) __attribute__((cleanup(array_##T##_dealloc)))
+//#define ARRAY_FUNCTION_PREFIX __attribute__((always_inline)) inline
+
+#define ARRAY_DEFINE(T)\
 typedef struct array_##T{\
  T* ptr;\
  uint64_t size;\
 } array_##T;\
-
-#define ARRAY_FUNCTION_PREFIX static
-
-#define ARRAY_FUNCTION_DEF(T)\
+\
+\
 ARRAY_FUNCTION_PREFIX T* const array_##T##_elm(array_##T* a,uint64_t i)\
 {return &a->ptr[i];}\
 \
