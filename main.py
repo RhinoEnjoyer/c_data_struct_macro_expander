@@ -4,6 +4,10 @@ import subprocess
 import argparse
 import os
 import re
+import csv
+
+
+
 class Template_Class:
     name :str
     prototype_file :str
@@ -85,12 +89,13 @@ def macro_expan(template_dict,struct, T, T_include):
 
 def expand_macros(template_dict):
     out = {}
-    # out = []
     for td in template_dict:
         out[td] = []
+        print("\nStruct: " + td)
         for t in template_dict[td].templates:
-            # out.append(macro_expan(template_dict,t.struct, t.type_t, t.dependencies)) 
+            print("\ttype: " + t.type_t)
             out[td].append(macro_expan(template_dict,t.struct, t.type_t, t.dependencies)) 
+    print('\n')
     return out
 
 def get_unique_headers(out):
@@ -109,42 +114,49 @@ def get_final_text(pragma, out_structs, out_headers, out_extra_macros):
     text += '\n'.join(x["text"] + "\n\n\n\n" for x in out_structs) + '\n'
     return text
 
+def template_list_read_csv(csv_filepath):
+    template_list = []
+    with open(csv_filepath,'r',encoding='utf-8') as csv_file:
+        csv_reader = csv.reader(csv_file)
+        for row in csv_reader:
+            struct = row[0].strip()
+            type_name = row[1].strip()
+            dependencies = None
+            if len(row) > 2:
+              dependencies = [row[i].strip() for i in range(2,len(row))]
+                          
+            template_list.append(Template_Entry(struct, type_name, dependencies))
+
+    return template_list
 
 
 #TODO: read a project's files and determine based on that what needs to be generated
 
+def main():
+    args = setup_argument_parser()
+    print("Current directory: " + os.getcwd())
+    out_dir = ""
+    if args.Output is not None and os.path.isdir(args.Output) is True:
+        out_dir = args.Output
+        print("Output directory: " + out_dir)
+    print('\n')
 
-args = setup_argument_parser()
-print("Current directory: " + os.getcwd())
-out_dir = ""
-if args.Output is not None and os.path.isdir(args.Output) is True:
-    out_dir = args.Output
-    print("Output directory: " + out_dir)
+    template_list = template_list_read_csv('./types.csv')
 
-
-template_list = []
-template_list.append(Template_Entry("vec", "str", ["../types.h"]))
-template_list.append(Template_Entry("vec", "uint32_t", ["stdint.h",]))
-template_list.append(Template_Entry("vec", "VkDeviceQueueCreateInfo", ["vulkan/vulkan.h",]))
-template_list.append(Template_Entry("vec", "VkSurfaceFormatKHR", ["vulkan/vulkan.h",]))
-template_list.append(Template_Entry("vec", "VkSubpassDependency", ["vulkan/vulkan.h",]))
-template_list.append(Template_Entry("vec", "VkAttachmentDescription", ["vulkan/vulkan.h",]))
-
-template_list.append(Template_Entry("array", "VkImage", ["vulkan/vulkan.h",]))
-template_list.append(Template_Entry("array", "VkImageView", ["vulkan/vulkan.h",]))
-template_list.append(Template_Entry("array", "VkSurfaceFormatKHR", ["vulkan/vulkan.h",]))
-template_list.append(Template_Entry("array", "VkPresentModeKHR", ["vulkan/vulkan.h",]))
-
-available_template_list = [
-  Template_Class("vec","./vector_macro.h","VECTOR_DEFINE"),
-  Template_Class("array","./array_macro.h","ARRAY_DEFINE"),
-]
-available_template_dict = template_class_dict_from_list(available_template_list,template_list)
+    available_template_list = [
+      Template_Class("vec","./vector_macro.h","VECTOR_DEFINE"),
+      Template_Class("array","./array_macro.h","ARRAY_DEFINE"),
+    ]
+    available_template_dict = template_class_dict_from_list(available_template_list,template_list)
 
 
-output_structs = expand_macros(available_template_dict)
-for o_struct in output_structs:
-    out_header_file_name = out_dir + o_struct + "_containers.h"
-    output_headers = get_unique_headers(output_structs[o_struct])
-    output_text = get_final_text(True,output_structs[o_struct], output_headers, available_template_dict[o_struct].extra_macros) + '\n'
-    open(out_header_file_name,'w',encoding="utf-8").write(output_text)
+    output_structs = expand_macros(available_template_dict)
+    for o_struct in output_structs:
+        out_header_file_name = out_dir + o_struct + "_containers.h"
+        output_headers = get_unique_headers(output_structs[o_struct])
+        output_text = get_final_text(True,output_structs[o_struct], output_headers, available_template_dict[o_struct].extra_macros) + '\n'
+        open(out_header_file_name,'w',encoding="utf-8").write(output_text)
+
+
+
+main()
